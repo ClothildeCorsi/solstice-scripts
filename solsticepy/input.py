@@ -117,10 +117,10 @@ class Parameters:
 	def BeamDown(self):
 		'''
 		'''
-		self.theta_deg=20.	# acceptance half angle of CPC
-		self.ratio_cpc_h=1. 	# ratio of CPC critical height [0.5,1]
+		self.cpc_theta_deg=20.	# acceptance half angle of CPC
+		self.cpc_h_ratio=1. 	# ratio of CPC critical height ]0,1]
 		self.field_rim_angle=45.	# field rim angle
-		self.secref_fratio=0.6	# ratio of the foci distance and apex distance to the origin [0.5,1]
+		self.secref_inv_eccen=0.6	# Hyperboloid inverse eccentricity [0,1]
 		self.rec_z=0.
 
 	def simulation(self):
@@ -133,7 +133,7 @@ class Parameters:
 		'''
 		self.n_row_oelt=5
 		self.n_col_oelt=5
-		self.n_rays=int(5e7)
+		self.n_rays=int(5e6)
 		self.n_procs=1
 		self.casedir='.'
 		self.method=1 # 1 - design the field based on the Q_in_rcv
@@ -183,10 +183,10 @@ class Parameters:
 				['H_rcv', self.H_rcv, 'm'],
 				['W_rcv', self.W_rcv, 'm'],
 				['rec_z', self.rec_z, 'm'],
-				['theta_deg', self.theta_deg, 'deg'],
-				['ratio_cpc_h', self.ratio_cpc_h, '-'],
+				['cpc_theta_deg', self.cpc_theta_deg, 'deg'],
+				['cpc_h_ratio', self.cpc_h_ratio, '-'],
 				['field_rim_angle', self.field_rim_angle, '-'],
-				['secref_fratio', self.secref_fratio, '-'],
+				['secref_inv_eccen', self.secref_inv_eccen, '-'],
 				['tilt_rcv', self.tilt_rcv, 'deg'],
 				['alpha_rcv', self.alpha_rcv, '-'],
 				['n_H_rcv', self.n_H_rcv, '-'],

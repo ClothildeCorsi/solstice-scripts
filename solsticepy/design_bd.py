@@ -97,8 +97,6 @@ class BD:
 		delta = bCoef_poly**2 - 4*aCoef_poly*cCoef_poly
 		root1 = (-bCoef_poly+np.sqrt(delta))/(2*aCoef_poly)
 		root2 = (-bCoef_poly-np.sqrt(delta))/(2*aCoef_poly)
-		print('root1: ', root1)
-		print('root2: ', root2)
 		if root1>0. and root2>0.:	# the line intersect the upper sheet of the hyperbola twice
 			z_inter = min(root1,root2)
 		else:	# the line intersect the upper and lower sheet of the hyperbola
@@ -124,8 +122,8 @@ class BD:
 		z_hyper = b_para*np.sqrt((x_hyper**2+y_hyper**2)/a_para_sqrt+1) - z0_hyper+g_para/2.
 		return z_hyper
 
-	def receiversystem(self, receiver, rec_abs=1., rec_w=1.2, rec_l=10., rec_z=0., rec_grid=200, cpc_nfaces=4, cpc_theta_deg=20., ratio_cpc_h=1.,
-	cpc_nZ=20., field_rim_angle=30., aim_z=62., secref_fratio=None, refl_sec=0.95, slope_error=0.0, secref_vert=np.array([[-15,25],[-15,-25],[15,-25],[15,25]])):
+	def receiversystem(self, receiver, rec_abs=1., rec_w=1.2, rec_l=10., rec_z=0., rec_grid=200, cpc_nfaces=4, cpc_theta_deg=20., cpc_h_ratio=1.,
+	cpc_nZ=20., field_rim_angle=30., aim_z=62., secref_inv_eccen=None, secref_vert=np.array([[-15,25],[-15,-25],[15,-25],[15,25]]), refl_sec=0.95, slope_error=0.0):
 
 		'''
 		Variables:
@@ -134,51 +132,52 @@ class BD:
 		- aim_z (tower height)
 		- rec_z (optional)
 		Arguments:
-			(1) receiver  :   str, type of the receiver; 'beam-down',
-			# Arguments for flat receiver
-			(2) rec_abs    : float, receiver surface absorptivity, e.g. 0.9
-            (3) rec_w     : float,  width of the receiver (m)
-            (4) rec_l     : float, length of the receiver (m)
-            (5) rec_z     : float, z (vertical) location of the receiver (m)
-            (6) rec_grid  : number of slices for solstice flux map
-			# Arguments for Compound Parabolic Concentrator (CPC)
-            (7) cpc_nfaces : int, number of faces of the CPC
-            (8) cpc_theta_deg : float, acceptance angle of CPC (deg)
-            (9) ratio_cpc_h     : float, ratio of critical CPC height calculated with theta_deg
-            in local coordinate system of the parabola in the xOy plan
-            WARNING: cpc_h is different from the total height of the CPC
-            (10) cpc_nZ     : int, number of number of incrementation for the clipping polygon for the construction of each CPC face
-			# Arguments for Secondary Reflector
-			(11) field_rim_angle : float, rim angle of the field formed wih vertical axis in the zOx plan (deg)
-            (12) aim_z   : float, z (vertical) location of the heliostats' aiming point (m)
-            (13) secref_fratio    : flaot, ratio of the foci distance and apex distance to the origin [0,1]
-            (14) r_f	: float, secondary mirror and CPC reflectivity, e.g. 0.9
-            (15) slope_error	: float, slope error of secondary mirror and CPC refelctivity (?)
-			(16) secref_vert	: array, clipping polygon of the secondary reflector
+		    (1) receiver  :   str, type of the receiver; 'beam-down',
+		    # Arguments for flat receiver
+		    (2) rec_abs    : float, receiver surface absorptivity, e.g. 0.9
+		    (3) rec_w     : float,  width of the receiver (m)
+		    (4) rec_l     : float, length of the receiver (m)
+		    (5) rec_z     : float, z (vertical) location of the receiver (m)
+		    (6) rec_grid  : number of slices for solstice flux map
+		    # Arguments for Compound Parabolic Concentrator (CPC)
+		    (7) cpc_nfaces : int, number of faces of the CPC
+		    (8) cpc_theta_deg : float, acceptance angle of CPC (deg)
+		    (9) cpc_h_ratio     : float, ratio of critical CPC height calculated with cpc_theta_deg
+		    in local coordinate system of the parabola in the xOy plan
+		    WARNING: cpc_h is different from the total height of the CPC
+		    (10) cpc_nZ     : int, number of number of incrementation for the clipping polygon for the construction of each CPC face
+		    # Arguments for Secondary Reflector
+		    (11) field_rim_angle : float, rim angle of the field formed wih vertical axis in the zOx plan (deg)
+		    (12) aim_z   : float, z (vertical) location of the heliostats' aiming point (m)
+		    (13) secref_inv_eccen    : flaot, hyperboloid inverse eccentricity: ratio of the apex distance over the foci distance to the origin, must be between 0 and 1
+		    (14) secref_vert	: array, clipping polygon of the secondary reflector
+		    (15) r_f	: float, secondary mirror and CPC reflectivity, e.g. 0.9
+		    (16) slope_error	: float, slope error of secondary mirror and CPC refelctivity (?)
 		'''
 		self.receiver=receiver
 		self.rec_abs=rec_abs
 
 		assert cpc_nfaces > 2, 'The number of faces for the CPC should be minimum 3, and it is {cpc_nfaces=}'
-		if secref_fratio != None:
-			assert 0.<=secref_fratio<1, 'The ratio of the hyperbole distances to foci and apex should be between 0. and 1, and it is {secref_fratio=}'
+		if secref_inv_eccen != None:
+			assert 0<=secref_inv_eccen<=1, 'The inverse eccentricity of the hyperbole must be between 0 and 1, and it is {secref_inv_eccen=}'
 		rec_rad_ref, rec_rad = self.cpcradius(rec_w, rec_l, cpc_nfaces)
 
 		# Calculate the maximum height of the CPC if not defined
 		cpc_theta = cpc_theta_deg*np.pi/180.
-		cpc_h = rec_rad_ref*(1+1/np.sin(cpc_theta))/np.tan(cpc_theta)*ratio_cpc_h
+		cpc_h = rec_rad_ref*(1+1/np.sin(cpc_theta))/np.tan(cpc_theta)*cpc_h_ratio
 
 		assert aim_z > (cpc_h+rec_z), 'The imaginary foci of the hyperbol is lower than its real foci'
 
 		# Calculate the characteristics of the secondary reflector
-		if secref_fratio is None:
+		if secref_inv_eccen is None:
 			vertex_dist, x_inter, foci_dist = self.hyperboloidparameters(rec_z, cpc_theta_deg, cpc_h, field_rim_angle, aim_z)
 		else:
 			foci_dist = (aim_z-(cpc_h+rec_z))/2.
-			vertex_dist = secref_fratio*foci_dist
+			vertex_dist = secref_inv_eccen*foci_dist
 			x_inter = None
 		secref_z = rec_z + cpc_h + vertex_dist + foci_dist
-		print('hyperboloid ratio: ', vertex_dist/foci_dist)
+		print('hyperboloid distances ratio: ', vertex_dist/foci_dist)
+		print('hyperboloid eccentricity: ', foci_dist/vertex_dist)
 
 		# Calculate the clipping polygon of the secondary reflector
 		if secref_vert is None:
@@ -483,7 +482,11 @@ class BD:
 			    res_hst=hst_annual[c]
 			    Qtot=res_hst[:,0]
 			    Qin=res_hst[:,-1]
-			    eff=np.sum(Qin[select_hst])/np.sum(Qtot[select_hst])
+			    Qtot_sum=np.sum(Qtot[select_hst])
+			    if Qtot_sum>0.:
+			        eff=np.sum(Qin[select_hst])/Qtot_sum
+			    else:
+			        eff=0.
 			    print('')
 			    print('sun position:', (c), 'eff', eff)
 
@@ -652,7 +655,7 @@ if __name__=='__main__':
 		slope_error = 0.0
 
 
-		bd.receiversystem(receiver='beam_down', rec_abs=float(pm.alpha_rcv), rec_w=float(rec_w), rec_l=float(rec_l), rec_z=float(rec_z), rec_grid=int(rec_grid), cpc_nfaces=int(n_CPC_faces), cpc_theta_deg=float(theta_deg), cpc_h=None, cpc_nZ=float(n_Z), field_rim_angle=float(rim_angle), aim_z=float(pm.H_tower), secref_fratio=None, refl_sec=float(refl_sec), slope_error=float(slope_error),	secref_vert=None)
+		bd.receiversystem(receiver='beam_down', rec_abs=float(pm.alpha_rcv), rec_w=float(rec_w), rec_l=float(rec_l), rec_z=float(rec_z), rec_grid=int(rec_grid), cpc_nfaces=int(n_CPC_faces), cpc_theta_deg=float(theta_deg), cpc_h=None, cpc_nZ=float(n_Z), field_rim_angle=float(rim_angle), aim_z=float(pm.H_tower), secref_inv_eccen=None, secref_vert=None, refl_sec=float(refl_sec), slope_error=float(slope_error))
 
 		bd.heliostatfield(field='surround', hst_rho=pm.rho_helio, slope=pm.slope_error, hst_w=pm.W_helio, hst_h=pm.H_helio, tower_h=pm.H_tower, tower_r=pm.R_tower, hst_z=pm.Z_helio, num_hst=num_hst, R1=pm.R1, fb=pm.fb, dsep=pm.dsep, x_max=150., y_max=150.)
 
